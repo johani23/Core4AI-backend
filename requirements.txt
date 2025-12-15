@@ -8,3 +8,4 @@ python-dotenv==1.0.0
 orjson==3.9.1
 requests==2.31.0
 websockets==11.0.3
+sqlalchemy==2.0.25
