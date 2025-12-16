@@ -4,8 +4,15 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: ""
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10
+
+    # 🔑 FORCE PYTHON VERSION
+    pythonVersion: 3.11.9
+
+    # 📦 BUILD
+    buildCommand: pip install -r requirements.txt
+
+    # 🚀 START (Render injects $PORT)
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+    # ❤️ HEALTH CHECK
+    healthCheckPath: /health
