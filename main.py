@@ -126,3 +126,15 @@ def root():
         "influence_api": "/api/influence",
         "rnd_api": "/api/rnd",
     }
+
+
+# ============================
+# SERVICE HEALTH CHECK (for Render / Load Balancers)
+# ============================
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "service": "core4-backend",
+        "version": "3.4"
+    }
