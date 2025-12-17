@@ -7,7 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # SQLite database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./core4.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:////data/core4.db"
+
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
