@@ -1,22 +1,66 @@
 # ============================================================================
-# Core4.AI – Unified Backend API
+# 💚 Core4.AI – Unified Backend API
 # CLEAN PRODUCTION main.py (FINAL + MARKET INTENTIONS)
+# Render-safe + Seeded
 # ============================================================================
+
+from contextlib import asynccontextmanager
 
 # ============================
 # DATABASE INITIALIZATION
 # ============================
-from db import Base, engine
+from db import Base, engine, SessionLocal
 
 # IMPORTANT — Load ALL models BEFORE create_all()
 from models import product
 from models import campaign
 from models.value_insights import ValueInsight
 from models.product_pricing_mit import ProductPricingMIT
-from models.market_intention import MarketIntention  # NEW
+from models.market_intention import MarketIntention
 
-# Create ALL DB tables
-Base.metadata.create_all(bind=engine)
+# ============================
+# SEED (DEMO PRODUCT)
+# ============================
+def seed_initial_data():
+    db = SessionLocal()
+    try:
+        product_obj = db.query(product.Product).filter(product.Product.id == 1).first()
+        if not product_obj:
+            product_obj = product.Product(
+                id=1,
+                name="demo",
+                price=4567,
+                competitor_price=5678,
+                category="test"
+            )
+            db.add(product_obj)
+
+        mit = db.query(ProductPricingMIT).filter(ProductPricingMIT.product_id == 1).first()
+        if not mit:
+            mit = ProductPricingMIT(
+                product_id=1,
+                smart_price=4800,
+                market_floor=4200,
+                market_ceiling=5500
+            )
+            db.add(mit)
+
+        db.commit()
+    finally:
+        db.close()
+
+# ============================
+# FASTAPI LIFESPAN
+# ============================
+@asynccontextmanager
+async def lifespan(app):
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+
+    # Seed demo data
+    seed_initial_data()
+
+    yield  # App runs here
 
 # ============================
 # FASTAPI IMPORTS
@@ -33,7 +77,7 @@ from routes.products import router as products_router
 from routes.orders import router as orders_router
 from routes.pulse import router as pulse_router
 
-# Market Intentions (NEW)
+# Market Intentions
 from routes.market_intentions import router as market_intentions_router
 
 # Creator APIs
@@ -64,6 +108,7 @@ app = FastAPI(
     title="Core4.AI Backend API",
     version="3.4",
     description="Unified backend with Demand-First Market Intention Engine",
+    lifespan=lifespan,
 )
 
 # ============================
@@ -86,13 +131,13 @@ app.include_router(products_router, prefix="/api")
 app.include_router(orders_router, prefix="/api")
 app.include_router(pulse_router, prefix="/api")
 
-# Market Intentions (Buyer -> Merchant)
+# Market Intentions
 app.include_router(market_intentions_router, prefix="/api")
 
 # Creator APIs
 app.include_router(creator_api_router, prefix="/api/creator")
 
-# Merchant APIs (internal prefixes already set)
+# Merchant APIs
 app.include_router(merchant_products_router)
 app.include_router(merchant_campaigns_router)
 app.include_router(merchant_analytics_router)
@@ -118,7 +163,7 @@ def root():
     return {
         "status": "Core4 Backend Running",
         "version": "3.4",
-        "database": "sqlite",
+        "database": "sqlite (/tmp)",
         "public_products": "/api/products",
         "market_intentions": "/api/market-intentions",
         "merchant_products": "/api/merchant/products",
@@ -127,9 +172,8 @@ def root():
         "rnd_api": "/api/rnd",
     }
 
-
 # ============================
-# SERVICE HEALTH CHECK (for Render / Load Balancers)
+# SERVICE HEALTH CHECK
 # ============================
 @app.get("/health")
 def health():
