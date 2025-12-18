@@ -1,6 +1,7 @@
 # ============================================================================
 # Core4.AI – Merchant Products API
-# FINAL STABLE VERSION (NO REDIRECTS / NO DUPLICATES / NO NaN)
+# FINAL STABLE VERSION
+# (NO REDIRECTS / NO DUPLICATES / NO NaN / FRONTEND-COMPATIBLE)
 # ============================================================================
 
 from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File
@@ -53,7 +54,7 @@ def get_single_product(product_id: int, db: Session = Depends(get_db)):
     }
 
 # ============================================================================
-# POST — CREATE PRODUCT  (✅ FIXED PATH)
+# POST — CREATE PRODUCT
 # ============================================================================
 @router.post("/")
 def create_product(
@@ -86,7 +87,7 @@ def create_product(
     }
 
 # ============================================================================
-# POST — CALCULATE & SAVE MIT
+# POST — CALCULATE & SAVE MIT (CLEAN + DEDUPLICATED)
 # ============================================================================
 @router.post("/{product_id}/mit")
 def calculate_and_save_mit(product_id: int, db: Session = Depends(get_db)):
@@ -105,6 +106,12 @@ def calculate_and_save_mit(product_id: int, db: Session = Depends(get_db)):
         2
     )
 
+    # 🔥 Ensure ONE MIT row per product
+    db.execute(
+        text("DELETE FROM product_pricing_mit WHERE product_id = :pid"),
+        {"pid": product_id}
+    )
+
     db.execute(
         text("""
             INSERT INTO product_pricing_mit
@@ -121,8 +128,8 @@ def calculate_and_save_mit(product_id: int, db: Session = Depends(get_db)):
             "smart": smart_price,
             "floor": market_floor,
             "ceiling": market_ceiling,
-            "tribe": "General",
-            "lift": "+15%",
+            "tribe": 0.6,     # numeric (safe)
+            "lift": 0.15,     # numeric (safe)
         }
     )
 
@@ -131,10 +138,12 @@ def calculate_and_save_mit(product_id: int, db: Session = Depends(get_db)):
     return {
         "status": "calculated",
         "smart_price": smart_price,
+        "market_floor": market_floor,
+        "market_ceiling": market_ceiling,
     }
 
 # ============================================================================
-# GET MIT — SAFE (NO NaN / NO 500)
+# GET MIT — SAFE + FRONTEND-COMPATIBLE
 # ============================================================================
 @router.get("/{product_id}/mit")
 def get_mit_price(product_id: int, db: Session = Depends(get_db)):
@@ -143,7 +152,6 @@ def get_mit_price(product_id: int, db: Session = Depends(get_db)):
             SELECT smart_price, market_floor, market_ceiling, competitor_price
             FROM product_pricing_mit
             WHERE product_id = :pid
-            ORDER BY created_at DESC
             LIMIT 1
         """),
         {"pid": product_id}
