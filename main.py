@@ -39,9 +39,13 @@ def seed_initial_data():
         if not mit:
             mit = ProductPricingMIT(
                 product_id=1,
+                base_price=4567,
+                competitor_price=5678,
                 smart_price=4800,
                 market_floor=4200,
-                market_ceiling=5500
+                market_ceiling=5500,
+                tribe_hotness=0.6,
+                conversion_lift=0.12
             )
             db.add(mit)
 
