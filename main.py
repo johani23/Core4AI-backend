@@ -19,15 +19,15 @@ import os
 from db import Base, engine, SessionLocal
 
 # IMPORTANT — Load ALL models BEFORE create_all()
-from app.models import product
-from app.models import campaign
-from app.models.signal import Signal
-from app.models.value_insights import ValueInsight
-from app.models.product_pricing_mit import ProductPricingMIT
-from app.models.market_intention import MarketIntention
-from app.models.governance_decision import GovernanceDecision
-from app.models.governance_review import GovernanceReview
-from app.models.tribe_signal import TribeSignal
+from models import product
+from models import campaign
+from models.signal import Signal
+from models.value_insights import ValueInsight
+from models.product_pricing_mit import ProductPricingMIT
+from models.market_intention import MarketIntention
+from models.governance_decision import GovernanceDecision
+from models.governance_review import GovernanceReview
+from models.tribe_signal import TribeSignal
 
 # 🔐 Tribe Governance Signal (Pricing + Trust)
 
