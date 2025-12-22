@@ -3,54 +3,29 @@
 # CLEAN PRODUCTION main.py (FINAL – PILOT + BETA HARDENING READY)
 # Render-safe + Seeded
 # ============================================================================
-# main.py ONLY wires APIs (no judgment here)
+# main.py ONLY wires APIs (no business logic here)
 # ============================================================================
 
 from contextlib import asynccontextmanager
 import os
-import importlib
 
 # ============================
 # DATABASE INITIALIZATION
 # ============================
 from db import Base, engine, SessionLocal
 
-
 # ============================
-# SAFE IMPORT RESOLVER (FIX ONCE FOREVER)
+# MODEL IMPORTS (FLAT REPO – CANONICAL)
 # ============================
-def _imp(*candidates):
-    """
-    Try import module paths in order; return first that works.
-    Raises the last error if none work.
-    """
-    last_err = None
-    for c in candidates:
-        try:
-            return importlib.import_module(c)
-        except ModuleNotFoundError as e:
-            last_err = e
-    raise last_err
-
-
-# ----------------------------
-# Models (try flat layout first, then app layout)
-# ----------------------------
-product = _imp("models.product", "app.models.product")
-campaign = _imp("models.campaign", "app.models.campaign")
-
-# Signal model name sometimes differs (signal.py vs signals.py)
-signal_mod = _imp("models.signal", "models.signals", "app.models.signal", "app.models.signals")
-
-ValueInsight = _imp("models.value_insights", "app.models.value_insights").ValueInsight
-ProductPricingMIT = _imp("models.product_pricing_mit", "app.models.product_pricing_mit").ProductPricingMIT
-MarketIntention = _imp("models.market_intention", "app.models.market_intention").MarketIntention
-GovernanceDecision = _imp("models.governance_decision", "app.models.governance_decision").GovernanceDecision
-GovernanceReview = _imp("models.governance_review", "app.models.governance_review").GovernanceReview
-TribeSignal = _imp("models.tribe_signal", "app.models.tribe_signal").TribeSignal
-
-Signal = getattr(signal_mod, "Signal")
-
+from models import product
+from models import campaign
+from models.signal import Signal
+from models.value_insights import ValueInsight
+from models.product_pricing_mit import ProductPricingMIT
+from models.market_intention import MarketIntention
+from models.governance_decision import GovernanceDecision
+from models.governance_review import GovernanceReview
+from models.tribe_signal import TribeSignal
 
 # ============================
 # SEED (DEMO PRODUCT)
@@ -58,7 +33,11 @@ Signal = getattr(signal_mod, "Signal")
 def seed_initial_data():
     db = SessionLocal()
     try:
-        product_obj = db.query(product.Product).filter(product.Product.id == 1).first()
+        product_obj = (
+            db.query(product.Product)
+            .filter(product.Product.id == 1)
+            .first()
+        )
 
         if not product_obj:
             product_obj = product.Product(
@@ -71,7 +50,11 @@ def seed_initial_data():
             )
             db.add(product_obj)
 
-        mit = db.query(ProductPricingMIT).filter(ProductPricingMIT.product_id == 1).first()
+        mit = (
+            db.query(ProductPricingMIT)
+            .filter(ProductPricingMIT.product_id == 1)
+            .first()
+        )
 
         if not mit:
             mit = ProductPricingMIT(
@@ -114,35 +97,30 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 # ============================
-# ROUTER IMPORTS (ALSO RESOLVED SAFELY)
+# ROUTER IMPORTS (FLAT)
 # ============================
-signals_router = _imp("routes.signals", "app.routes.signals").router
+from routes.signals import router as signals_router
 
-# Governance (some repos keep these under app.routes)
-governance_queue_router = _imp("app.routes.governance_queue", "routes.governance_queue").router
-governance_debug_router = _imp("app.routes.governance_debug", "routes.governance_debug").router
-governance_metrics_router = _imp("app.routes.governance_metrics", "routes.governance_metrics").router
+from routes.products import router as products_router
+from routes.orders import router as orders_router
+from routes.pulse import router as pulse_router
 
-products_router = _imp("routes.products", "app.routes.products").router
-orders_router = _imp("routes.orders", "app.routes.orders").router
-pulse_router = _imp("routes.pulse", "app.routes.pulse").router
+from routes.market_intentions import router as market_intentions_router
+from routes.creator_api import router as creator_api_router
 
-market_intentions_router = _imp("routes.market_intentions", "app.routes.market_intentions").router
-creator_api_router = _imp("routes.creator_api", "app.routes.creator_api").router
+from routes.merchant.products import router as merchant_products_router
+from routes.merchant.campaigns import router as merchant_campaigns_router
+from routes.merchant.analytics import router as merchant_analytics_router
+from routes.merchant.analytics_v2 import router as merchant_analytics_v2_router
+from routes.merchant.commission import router as merchant_commission_router
 
-merchant_products_router = _imp("routes.merchant.products", "app.routes.merchant.products").router
-merchant_campaigns_router = _imp("routes.merchant.campaigns", "app.routes.merchant.campaigns").router
-merchant_analytics_router = _imp("routes.merchant.analytics", "app.routes.merchant.analytics").router
-merchant_analytics_v2_router = _imp("routes.merchant.analytics_v2", "app.routes.merchant.analytics_v2").router
-merchant_commission_router = _imp("routes.merchant.commission", "app.routes.merchant.commission").router
+from routes.audience import router as audience_router
+from routes.influence import router as influence_router
 
-audience_router = _imp("routes.audience", "app.routes.audience").router
-influence_router = _imp("routes.influence", "app.routes.influence").router
+from routes.creator import router as creator_legacy_router
+from routes.analytics import router as analytics_legacy_router
 
-creator_legacy_router = _imp("routes.creator", "app.routes.creator").router
-analytics_legacy_router = _imp("routes.analytics", "app.routes.analytics").router
-
-rnd_router = _imp("routes.rnd_routes", "app.routes.rnd_routes").router
+from routes.rnd_routes import router as rnd_router
 
 
 # ============================
@@ -153,7 +131,8 @@ app = FastAPI(
     version="3.5-beta-hardened",
     description=(
         "Unified backend API with Signal Ingestion, "
-        "Human-in-the-loop Governance, Tribe-Governed Pricing, "
+        "Human-in-the-loop Governance, "
+        "Tribe-Governed Pricing, "
         "Explainability, and Operational Metrics"
     ),
     lifespan=lifespan,
@@ -176,10 +155,6 @@ app.add_middleware(
 # ROUTE REGISTRATION
 # ============================
 app.include_router(signals_router, prefix="/api")
-
-app.include_router(governance_queue_router, prefix="/api")
-app.include_router(governance_debug_router, prefix="/api")
-app.include_router(governance_metrics_router, prefix="/api")
 
 app.include_router(products_router, prefix="/api")
 app.include_router(orders_router, prefix="/api")
@@ -204,7 +179,7 @@ app.include_router(rnd_router, prefix="/api/rnd")
 
 
 # ============================
-# ROOT HEALTH CHECK
+# HEALTH CHECKS
 # ============================
 @app.get("/")
 def root():
